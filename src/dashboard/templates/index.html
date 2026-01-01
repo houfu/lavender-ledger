@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+
+{% block title %}Home - Lavender Ledger{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Your Family's Spending Overview</h1>
+
+    {% if available_months %}
+    <div class="month-selector">
+        <label for="month-select">Show me:</label>
+        <select id="month-select" onchange="changeMonth(this.value)">
+            {% for y, m in available_months %}
+            <option value="{{ y }}-{{ m }}" {% if y == current_year and m == current_month %}selected{% endif %}>
+                {{ ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][m-1] }} {{ y }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+    {% endif %}
+</div>
+
+{% if last_updated %}
+<div class="last-updated-banner">
+    <span class="update-icon">🔄</span>
+    <span class="update-text">
+        Last updated {{ last_updated.completed_at }}
+        {% if last_updated.transactions_added > 0 %}
+        ({{ last_updated.transactions_added }} transactions added
+        {% if last_updated.pdfs_processed > 0 %}from {{ last_updated.pdfs_processed }} statements{% endif %})
+        {% endif %}
+    </span>
+</div>
+{% endif %}
+
+{% if summary %}
+<div class="summary-grid">
+    <!-- Main Summary Card -->
+    <div class="card summary-card">
+        <h2>{{ ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][current_month-1] }} {{ current_year }}</h2>
+
+        <div class="summary-row">
+            <div class="summary-item income">
+                <span class="summary-icon">💰</span>
+                <div class="summary-details">
+                    <span class="summary-label">Total Income</span>
+                    <span class="summary-value">${{ "{:,.2f}".format(summary.total_income) }}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="summary-row">
+            <div class="summary-item expenses">
+                <span class="summary-icon">🛒</span>
+                <div class="summary-details">
+                    <span class="summary-label">Total Spending</span>
+                    <span class="summary-value">${{ "{:,.2f}".format(summary.total_expenses) }}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="summary-row">
+            <div class="summary-item {% if summary.net >= 0 %}positive{% else %}negative{% endif %}">
+                <span class="summary-icon">📊</span>
+                <div class="summary-details">
+                    <span class="summary-label">What's Left</span>
+                    <span class="summary-value">{% if summary.net >= 0 %}+{% endif %}${{ "{:,.2f}".format(summary.net) }}</span>
+                </div>
+            </div>
+        </div>
+
+        {% if top_categories %}
+        <div class="top-categories">
+            <h3>🏆 Top Categories</h3>
+            <ol class="category-list">
+                {% for cat in top_categories %}
+                <li>
+                    <span class="category-name">{{ cat.category }}</span>
+                    <span class="category-amount">${{ "{:,.2f}".format(cat.amount) }}</span>
+                </li>
+                {% endfor %}
+            </ol>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="stats-row">
+        <div class="card stat-card">
+            <span class="stat-value">{{ summary.transaction_count }}</span>
+            <span class="stat-label">Transactions</span>
+        </div>
+
+        <div class="card stat-card">
+            <span class="stat-value">${{ "{:,.2f}".format(summary.average_daily_spend) }}</span>
+            <span class="stat-label">Daily Average</span>
+        </div>
+
+        <div class="card stat-card">
+            <span class="stat-value">{{ summary.days_in_month - summary.days_elapsed }}</span>
+            <span class="stat-label">Days Left</span>
+        </div>
+
+        {% if flagged_count > 0 %}
+        <div class="card stat-card flagged">
+            <span class="stat-value">{{ flagged_count }}</span>
+            <span class="stat-label">Need Review</span>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Category Pie Chart -->
+    {% if top_categories %}
+    <div class="card chart-card">
+        <h3>Where Your Money Goes</h3>
+        <div class="chart-container">
+            <canvas id="categoryChart"></canvas>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+{% else %}
+<div class="empty-state">
+    <div class="empty-icon">📂</div>
+    <h2>No transactions yet</h2>
+    <p>Start by ingesting some bank statements!</p>
+    <code>Ask Claude Code: "Please run the ingestion skill"</code>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+function changeMonth(value) {
+    const [year, month] = value.split('-');
+    window.location.href = `/?year=${year}&month=${month}`;
+}
+
+{% if top_categories %}
+const ctx = document.getElementById('categoryChart').getContext('2d');
+new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+        labels: [{% for cat in top_categories %}'{{ cat.category }}'{% if not loop.last %}, {% endif %}{% endfor %}],
+        datasets: [{
+            data: [{% for cat in top_categories %}{{ cat.amount }}{% if not loop.last %}, {% endif %}{% endfor %}],
+            backgroundColor: [{% for cat in top_categories %}'{{ cat.color }}'{% if not loop.last %}, {% endif %}{% endfor %}],
+            borderWidth: 0
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom',
+                labels: {
+                    font: {
+                        family: 'Nunito'
+                    }
+                }
+            }
+        }
+    }
+});
+{% endif %}
+</script>
+{% endblock %}

@@ -1,0 +1,19 @@
+# Lavender Ledger - Development Configuration
+# This file points to the local data directory for development
+
+# Path to local data directory (in repo, gitignored)
+data_directory: ./data
+
+# Database configuration
+database_path: ${data_directory}/finance.db
+
+# Statements configuration
+statements:
+  staging_path: ${data_directory}/statements/staging
+  archive_path: ${data_directory}/statements/archive
+
+# Dashboard
+dashboard:
+  host: 127.0.0.1
+  port: 5000
+  debug: true

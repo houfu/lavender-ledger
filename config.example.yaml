@@ -1,0 +1,23 @@
+# Lavender Ledger Configuration
+# Copy this file to config.yaml and customize
+
+# Path to cloud-synced data directory
+data_directory: ~/Dropbox/PersonalFinance
+
+# Database configuration
+database_path: ${data_directory}/finance.db
+
+# Statements configuration
+statements:
+  staging_path: ${data_directory}/statements/staging
+  archive_path: ${data_directory}/statements/archive
+
+# Dashboard
+dashboard:
+  host: 0.0.0.0
+  port: 5000
+  debug: false
+
+# Anthropic API (optional - only needed if not using Claude Code)
+# anthropic:
+#   api_key: your-api-key-here

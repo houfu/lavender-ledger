@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+
+{% block title %}Categories - Lavender Ledger{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>📦 Where Your Money Goes</h1>
+
+    {% if available_months %}
+    <div class="month-selector">
+        <label for="month-select">Show me:</label>
+        <select id="month-select" onchange="changeMonth(this.value)">
+            {% for y, m in available_months %}
+            <option value="{{ y }}-{{ m }}" {% if y == current_year and m == current_month %}selected{% endif %}>
+                {{ ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][m-1] }} {{ y }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+    {% endif %}
+</div>
+
+{% if breakdown %}
+<div class="categories-grid">
+    <!-- Pie Chart -->
+    <div class="card chart-card large">
+        <div class="chart-container pie-chart">
+            <canvas id="categoryPie"></canvas>
+        </div>
+    </div>
+
+    <!-- Category Cards -->
+    <div class="category-cards">
+        {% for cat in breakdown %}
+        <div class="card category-card" style="border-left: 4px solid {{ cat.color }}">
+            <div class="category-header">
+                <span class="category-name">{{ cat.category }}</span>
+                <span class="category-pct">{{ "{:.1f}".format(cat.percentage) }}%</span>
+            </div>
+            <div class="category-amount">${{ "{:,.2f}".format(cat.amount) }}</div>
+            <div class="category-count">{{ cat.transaction_count }} transaction{% if cat.transaction_count != 1 %}s{% endif %}</div>
+            <a href="{{ url_for('transactions', category=cat.category, year=current_year, month=current_month) }}" class="category-link">View Details</a>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Trend Chart -->
+    {% if trend %}
+    <div class="card chart-card">
+        <h3>Spending Over Time</h3>
+        <div class="chart-container bar-chart">
+            <canvas id="trendChart"></canvas>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+{% else %}
+<div class="empty-state">
+    <div class="empty-icon">📂</div>
+    <h2>No spending data yet</h2>
+    <p>Start by ingesting some bank statements!</p>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+function changeMonth(value) {
+    const [year, month] = value.split('-');
+    window.location.href = `/categories?year=${year}&month=${month}`;
+}
+
+{% if breakdown %}
+// Pie Chart
+const pieCtx = document.getElementById('categoryPie').getContext('2d');
+new Chart(pieCtx, {
+    type: 'doughnut',
+    data: {
+        labels: [{% for cat in breakdown %}'{{ cat.category }}'{% if not loop.last %}, {% endif %}{% endfor %}],
+        datasets: [{
+            data: [{% for cat in breakdown %}{{ cat.amount }}{% if not loop.last %}, {% endif %}{% endfor %}],
+            backgroundColor: [{% for cat in breakdown %}'{{ cat.color }}'{% if not loop.last %}, {% endif %}{% endfor %}],
+            borderWidth: 0
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'right',
+                labels: {
+                    font: {
+                        family: 'Nunito'
+                    }
+                }
+            },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        const value = context.raw;
+                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                        const pct = ((value / total) * 100).toFixed(1);
+                        return `$${value.toLocaleString()} (${pct}%)`;
+                    }
+                }
+            }
+        }
+    }
+});
+
+{% if trend %}
+// Trend Chart
+const trendCtx = document.getElementById('trendChart').getContext('2d');
+new Chart(trendCtx, {
+    type: 'bar',
+    data: {
+        labels: [{% for t in trend %}'{{ t.month }}'{% if not loop.last %}, {% endif %}{% endfor %}],
+        datasets: [{
+            label: 'Spending',
+            data: [{% for t in trend %}{{ t.expenses }}{% if not loop.last %}, {% endif %}{% endfor %}],
+            backgroundColor: '#C8B6E2',
+            borderRadius: 8
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                display: false
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    callback: function(value) {
+                        return '$' + value.toLocaleString();
+                    }
+                }
+            }
+        }
+    }
+});
+{% endif %}
+{% endif %}
+</script>
+{% endblock %}

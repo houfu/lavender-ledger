@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+
+{% block title %}Trends - Lavender Ledger{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>📈 Spending Patterns</h1>
+
+    {% if available_months %}
+    <div class="month-selector">
+        <label for="month-select">Top merchants for:</label>
+        <select id="month-select" onchange="changeMonth(this.value)">
+            {% for y, m in available_months %}
+            <option value="{{ y }}-{{ m }}" {% if y == current_year and m == current_month %}selected{% endif %}>
+                {{ ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][m-1] }} {{ y }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+    {% endif %}
+</div>
+
+<div class="trends-grid">
+    <!-- Spending Over Time -->
+    {% if trend %}
+    <div class="card chart-card wide">
+        <h3>How We've Been Spending</h3>
+        <div class="chart-container line-chart">
+            <canvas id="spendingTrend"></canvas>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Top Merchants -->
+    {% if top_merchants %}
+    <div class="card merchants-card">
+        <h3>🏪 Top Places We Spend</h3>
+        <div class="merchants-list">
+            {% for m in top_merchants %}
+            <div class="merchant-item">
+                <div class="merchant-rank">{{ loop.index }}</div>
+                <div class="merchant-info">
+                    <div class="merchant-name">{{ m.merchant }}</div>
+                    <div class="merchant-stats">
+                        ${{ "{:,.2f}".format(m.total) }} ({{ m.visits }} visit{% if m.visits != 1 %}s{% endif %})
+                    </div>
+                    <div class="merchant-avg">About ${{ "{:,.2f}".format(m.average) }} each time</div>
+                </div>
+                <div class="merchant-category">{{ m.category or 'Uncategorized' }}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Income vs Expenses -->
+    {% if trend %}
+    <div class="card chart-card">
+        <h3>Income vs Spending</h3>
+        <div class="chart-container bar-chart">
+            <canvas id="incomeExpenses"></canvas>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+{% if not trend and not top_merchants %}
+<div class="empty-state">
+    <div class="empty-icon">📊</div>
+    <h2>Not enough data yet</h2>
+    <p>Keep tracking your spending to see patterns emerge!</p>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+function changeMonth(value) {
+    const [year, month] = value.split('-');
+    window.location.href = `/trends?year=${year}&month=${month}`;
+}
+
+{% if trend %}
+// Spending Trend Line Chart
+const trendCtx = document.getElementById('spendingTrend').getContext('2d');
+new Chart(trendCtx, {
+    type: 'line',
+    data: {
+        labels: [{% for t in trend %}'{{ t.month }}'{% if not loop.last %}, {% endif %}{% endfor %}],
+        datasets: [{
+            label: 'Spending',
+            data: [{% for t in trend %}{{ t.expenses }}{% if not loop.last %}, {% endif %}{% endfor %}],
+            borderColor: '#9B7EBD',
+            backgroundColor: 'rgba(200, 182, 226, 0.2)',
+            fill: true,
+            tension: 0.4,
+            pointBackgroundColor: '#9B7EBD',
+            pointBorderColor: '#fff',
+            pointBorderWidth: 2,
+            pointRadius: 5
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                display: false
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    callback: function(value) {
+                        return '$' + value.toLocaleString();
+                    }
+                }
+            }
+        }
+    }
+});
+
+// Income vs Expenses Bar Chart
+const ieCtx = document.getElementById('incomeExpenses').getContext('2d');
+new Chart(ieCtx, {
+    type: 'bar',
+    data: {
+        labels: [{% for t in trend %}'{{ t.month }}'{% if not loop.last %}, {% endif %}{% endfor %}],
+        datasets: [
+            {
+                label: 'Income',
+                data: [{% for t in trend %}{{ t.income }}{% if not loop.last %}, {% endif %}{% endfor %}],
+                backgroundColor: '#81C784',
+                borderRadius: 8
+            },
+            {
+                label: 'Spending',
+                data: [{% for t in trend %}{{ t.expenses }}{% if not loop.last %}, {% endif %}{% endfor %}],
+                backgroundColor: '#C8B6E2',
+                borderRadius: 8
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom',
+                labels: {
+                    font: {
+                        family: 'Nunito'
+                    }
+                }
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    callback: function(value) {
+                        return '$' + value.toLocaleString();
+                    }
+                }
+            }
+        }
+    }
+});
+{% endif %}
+</script>
+{% endblock %}

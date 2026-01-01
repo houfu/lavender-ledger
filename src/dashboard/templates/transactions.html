@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block title %}Transactions - Lavender Ledger{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>📝 All Transactions</h1>
+</div>
+
+<!-- Filters -->
+<div class="card filters-card">
+    <form method="GET" action="{{ url_for('transactions') }}" class="filters-form">
+        <div class="filter-group">
+            <label for="search">🔍 Search</label>
+            <input type="text" id="search" name="search" placeholder="Search for a store or place..."
+                   value="{{ current_search or '' }}">
+        </div>
+
+        <div class="filter-group">
+            <label for="month-filter">Month</label>
+            <select id="month-filter" name="month">
+                <option value="">All Time</option>
+                {% for y, m in available_months %}
+                <option value="{{ m }}" data-year="{{ y }}"
+                    {% if y == current_year and m == current_month %}selected{% endif %}>
+                    {{ ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][m-1] }} {{ y }}
+                </option>
+                {% endfor %}
+            </select>
+            <input type="hidden" name="year" id="year-hidden" value="{{ current_year or '' }}">
+        </div>
+
+        <div class="filter-group">
+            <label for="category-filter">Category</label>
+            <select id="category-filter" name="category">
+                <option value="">All Categories</option>
+                {% for cat in categories %}
+                <option value="{{ cat }}" {% if cat == current_category %}selected{% endif %}>{{ cat }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Filter</button>
+        <a href="{{ url_for('transactions') }}" class="btn btn-secondary">Clear</a>
+    </form>
+</div>
+
+<!-- Transaction Count -->
+<div class="results-info">
+    <p>Showing {{ transactions|length }} of {{ total }} transaction{% if total != 1 %}s{% endif %}</p>
+</div>
+
+<!-- Transaction List -->
+{% if transactions %}
+<div class="transactions-list">
+    {% for t in transactions %}
+    <div class="card transaction-card {% if t.is_income %}income{% else %}expense{% endif %}">
+        <div class="transaction-date">
+            {{ t.date }}
+        </div>
+        <div class="transaction-main">
+            <div class="transaction-merchant">{{ t.merchant }}</div>
+            <div class="transaction-category">{{ t.category }}</div>
+        </div>
+        <div class="transaction-account">
+            {{ t.account_name }}
+        </div>
+        <div class="transaction-amount {% if t.is_income %}positive{% else %}negative{% endif %}">
+            {% if t.is_income %}+{% endif %}${{ "{:,.2f}".format(t.amount|abs) }}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if pages > 1 %}
+<div class="pagination">
+    {% if page > 1 %}
+    <a href="{{ url_for('transactions', page=page-1, year=current_year, month=current_month, category=current_category, search=current_search) }}" class="btn btn-secondary">← Previous</a>
+    {% endif %}
+
+    <span class="page-info">Page {{ page }} of {{ pages }}</span>
+
+    {% if page < pages %}
+    <a href="{{ url_for('transactions', page=page+1, year=current_year, month=current_month, category=current_category, search=current_search) }}" class="btn btn-secondary">Next →</a>
+    {% endif %}
+</div>
+{% endif %}
+
+{% else %}
+<div class="empty-state">
+    <div class="empty-icon">🔍</div>
+    <h2>No transactions found</h2>
+    <p>Try adjusting your filters or search terms.</p>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('month-filter').addEventListener('change', function() {
+    const selected = this.options[this.selectedIndex];
+    document.getElementById('year-hidden').value = selected.dataset.year || '';
+});
+</script>
+{% endblock %}
