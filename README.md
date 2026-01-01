@@ -1,5 +1,10 @@
 # Lavender Ledger 🌸
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-purple.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Tests](https://img.shields.io/badge/tests-49%20passing-success.svg)](tests/)
+
 **Personal expense tracking powered by Claude Code. No API keys, no config—just intelligent automation.**
 
 Lavender Ledger transforms messy bank statements into beautiful spending insights using Claude Code's native intelligence. Drop PDFs or CSVs into your staging folder, ask Claude to ingest them, and watch as transactions are automatically parsed, categorized, and organized—no spreadsheets, no manual data entry, no complexity.
@@ -59,7 +64,7 @@ Built specifically for Claude Code, this isn't just another finance app—it's a
 
 ```bash
 # Clone the repository
-git clone <repository-url>
+git clone https://github.com/houfu/lavender-ledger.git
 cd lavender-ledger
 
 # Install dependencies
