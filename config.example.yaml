@@ -18,6 +18,12 @@ dashboard:
   port: 5000
   debug: false
 
+# Terminal (for executing Claude Code commands from dashboard)
+terminal:
+  # Password for terminal access (can also be set via TERMINAL_PASSWORD env var)
+  # Default: "lavender"
+  password: lavender
+
 # Anthropic API (optional - only needed if not using Claude Code)
 # anthropic:
 #   api_key: your-api-key-here

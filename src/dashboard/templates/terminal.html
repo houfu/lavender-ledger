@@ -1,0 +1,424 @@
+{% extends "base.html" %}
+
+{% block title %}Terminal - Lavender Ledger{% endblock %}
+
+{% block head %}
+<!-- xterm.js CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
+<!-- Socket.io client -->
+<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+<!-- xterm.js -->
+<script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js"></script>
+<!-- xterm.js fit addon -->
+<script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.min.js"></script>
+
+<style>
+    .terminal-container {
+        background: white;
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: 0 2px 8px rgba(155, 126, 189, 0.1);
+        margin-top: 24px;
+        height: calc(100vh - 200px);
+        display: flex;
+        flex-direction: column;
+    }
+
+    .terminal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+        padding-bottom: 16px;
+        border-bottom: 2px solid #E6D5F5;
+    }
+
+    .terminal-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #9B7EBD;
+    }
+
+    .terminal-status {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.9rem;
+    }
+
+    .status-indicator {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #ccc;
+    }
+
+    .status-indicator.connected {
+        background: #4CAF50;
+        animation: pulse 2s infinite;
+    }
+
+    .status-indicator.disconnected {
+        background: #f44336;
+    }
+
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+
+    .terminal-warning {
+        background: #FFF3E0;
+        border-left: 4px solid #FF9800;
+        padding: 12px 16px;
+        margin-bottom: 16px;
+        border-radius: 8px;
+        font-size: 0.9rem;
+    }
+
+    .terminal-wrapper {
+        flex: 1;
+        background: #1e1e1e;
+        border-radius: 8px;
+        padding: 16px;
+        overflow: hidden;
+    }
+
+    #terminal {
+        height: 100%;
+    }
+
+    /* Auth Modal */
+    .auth-modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+    }
+
+    .auth-modal.hidden {
+        display: none;
+    }
+
+    .auth-card {
+        background: white;
+        border-radius: 16px;
+        padding: 32px;
+        max-width: 400px;
+        width: 90%;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+    }
+
+    .auth-card h2 {
+        margin-top: 0;
+        color: #9B7EBD;
+        font-size: 1.8rem;
+        margin-bottom: 8px;
+    }
+
+    .auth-card p {
+        color: #666;
+        margin-bottom: 24px;
+    }
+
+    .auth-input {
+        width: 100%;
+        padding: 12px 16px;
+        border: 2px solid #E6D5F5;
+        border-radius: 8px;
+        font-size: 1rem;
+        margin-bottom: 16px;
+        box-sizing: border-box;
+    }
+
+    .auth-input:focus {
+        outline: none;
+        border-color: #9B7EBD;
+    }
+
+    .auth-button {
+        width: 100%;
+        padding: 12px;
+        background: #9B7EBD;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+
+    .auth-button:hover {
+        background: #8A6DAD;
+    }
+
+    .auth-button:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+    }
+
+    .auth-error {
+        background: #FFEBEE;
+        color: #C62828;
+        padding: 12px;
+        border-radius: 8px;
+        margin-bottom: 16px;
+        display: none;
+    }
+
+    .auth-error.visible {
+        display: block;
+    }
+
+    .terminal-controls {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 16px;
+    }
+
+    .control-button {
+        padding: 8px 16px;
+        background: #E6D5F5;
+        color: #9B7EBD;
+        border: none;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+
+    .control-button:hover {
+        background: #D5C4EA;
+    }
+
+    .control-button:disabled {
+        background: #f0f0f0;
+        color: #ccc;
+        cursor: not-allowed;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="auth-modal" id="authModal">
+    <div class="auth-card">
+        <h2>🔐 Terminal Access</h2>
+        <p>Enter password to activate terminal</p>
+        <div class="auth-error" id="authError">Invalid password</div>
+        <form id="authForm">
+            <input
+                type="password"
+                class="auth-input"
+                id="passwordInput"
+                placeholder="Enter password"
+                autocomplete="off"
+                required
+            />
+            <button type="submit" class="auth-button" id="authButton">
+                Unlock Terminal
+            </button>
+        </form>
+    </div>
+</div>
+
+<div class="terminal-container">
+    <div class="terminal-header">
+        <div class="terminal-title">🌸 Terminal</div>
+        <div class="terminal-status">
+            <div class="status-indicator" id="statusIndicator"></div>
+            <span id="statusText">Disconnected</span>
+        </div>
+    </div>
+
+    <div class="terminal-warning">
+        ⚠️ <strong>Restricted Terminal:</strong> Only Claude Code commands are allowed.
+        Commands execute on the server with current permissions.
+    </div>
+
+    <div class="terminal-controls">
+        <button class="control-button" id="clearButton" disabled>Clear Terminal</button>
+        <button class="control-button" id="stopButton" disabled>Stop Command</button>
+        <button class="control-button" id="reconnectButton" disabled>Reconnect</button>
+    </div>
+
+    <div class="terminal-wrapper">
+        <div id="terminal"></div>
+    </div>
+</div>
+
+<script>
+    // Terminal instance
+    let term;
+    let socket;
+    let fitAddon;
+    let currentCommand = '';
+    let isAuthenticated = false;
+
+    // Initialize terminal
+    function initTerminal() {
+        term = new Terminal({
+            cursorBlink: true,
+            fontSize: 14,
+            fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+            theme: {
+                background: '#1e1e1e',
+                foreground: '#E6D5F5',
+                cursor: '#9B7EBD',
+                cursorAccent: '#1e1e1e',
+                selection: 'rgba(155, 126, 189, 0.3)',
+            },
+            cols: 80,
+            rows: 30,
+        });
+
+        fitAddon = new FitAddon.FitAddon();
+        term.loadAddon(fitAddon);
+        term.open(document.getElementById('terminal'));
+        fitAddon.fit();
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            fitAddon.fit();
+        });
+
+        // Handle terminal input
+        term.onData(data => {
+            if (!isAuthenticated) return;
+
+            if (data === '\r') { // Enter key
+                socket.emit('execute_command', { command: currentCommand });
+                currentCommand = '';
+            } else if (data === '\u007F') { // Backspace
+                if (currentCommand.length > 0) {
+                    currentCommand = currentCommand.slice(0, -1);
+                    term.write('\b \b');
+                }
+            } else if (data === '\u0003') { // Ctrl+C
+                socket.emit('stop_command');
+                currentCommand = '';
+                term.write('^C');
+            } else if (data >= String.fromCharCode(0x20) && data <= String.fromCharCode(0x7E)) {
+                // Printable characters
+                currentCommand += data;
+                term.write(data);
+            }
+        });
+
+        term.writeln('Waiting for authentication...');
+    }
+
+    // Initialize WebSocket
+    function initWebSocket() {
+        socket = io('/terminal', {
+            transports: ['websocket', 'polling']
+        });
+
+        socket.on('connect', () => {
+            updateStatus('connected', 'Connected');
+            if (!isAuthenticated) {
+                showAuthModal();
+            }
+        });
+
+        socket.on('disconnect', () => {
+            updateStatus('disconnected', 'Disconnected');
+            isAuthenticated = false;
+            disableControls();
+        });
+
+        socket.on('auth_success', (data) => {
+            isAuthenticated = true;
+            hideAuthModal();
+            enableControls();
+            term.clear();
+        });
+
+        socket.on('auth_failed', (data) => {
+            showAuthError(data.message);
+        });
+
+        socket.on('terminal_output', (data) => {
+            if (data.is_error) {
+                term.write('\x1b[31m' + data.data + '\x1b[0m'); // Red for errors
+            } else {
+                term.write(data.data);
+            }
+        });
+    }
+
+    // Auth modal functions
+    function showAuthModal() {
+        document.getElementById('authModal').classList.remove('hidden');
+        document.getElementById('passwordInput').focus();
+    }
+
+    function hideAuthModal() {
+        document.getElementById('authModal').classList.add('hidden');
+        document.getElementById('authError').classList.remove('visible');
+        document.getElementById('passwordInput').value = '';
+    }
+
+    function showAuthError(message) {
+        const errorEl = document.getElementById('authError');
+        errorEl.textContent = message;
+        errorEl.classList.add('visible');
+        document.getElementById('authButton').disabled = false;
+    }
+
+    // Status indicator
+    function updateStatus(status, text) {
+        const indicator = document.getElementById('statusIndicator');
+        const statusText = document.getElementById('statusText');
+        indicator.className = 'status-indicator ' + status;
+        statusText.textContent = text;
+    }
+
+    // Control buttons
+    function enableControls() {
+        document.getElementById('clearButton').disabled = false;
+        document.getElementById('stopButton').disabled = false;
+        document.getElementById('reconnectButton').disabled = false;
+    }
+
+    function disableControls() {
+        document.getElementById('clearButton').disabled = true;
+        document.getElementById('stopButton').disabled = true;
+        document.getElementById('reconnectButton').disabled = true;
+    }
+
+    // Event listeners
+    document.getElementById('authForm').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const password = document.getElementById('passwordInput').value;
+        document.getElementById('authButton').disabled = true;
+        socket.emit('authenticate', { password });
+    });
+
+    document.getElementById('clearButton').addEventListener('click', () => {
+        term.clear();
+    });
+
+    document.getElementById('stopButton').addEventListener('click', () => {
+        socket.emit('stop_command');
+    });
+
+    document.getElementById('reconnectButton').addEventListener('click', () => {
+        socket.disconnect();
+        socket.connect();
+    });
+
+    // Initialize on page load
+    window.addEventListener('load', () => {
+        initTerminal();
+        initWebSocket();
+    });
+</script>
+{% endblock %}
