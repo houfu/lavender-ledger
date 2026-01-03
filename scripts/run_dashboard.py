@@ -51,9 +51,9 @@ def main():
     print("Press Ctrl+C to stop")
     print()
 
-    # Create and run app
+    # Create and run app with SocketIO support
     app = create_app(config)
-    app.run(host=host, port=port, debug=debug)
+    app.socketio.run(app, host=host, port=port, debug=debug)
 
     return 0
 

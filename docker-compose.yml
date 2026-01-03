@@ -13,6 +13,7 @@ services:
       - DATA_DIRECTORY=/data
       - DATABASE_PATH=/data/finance.db
       - FLASK_ENV=production
+      - TERMINAL_PASSWORD=${TERMINAL_PASSWORD:-lavender}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
