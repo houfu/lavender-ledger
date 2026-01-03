@@ -63,6 +63,50 @@ docker compose down                       # Stop (before ingestion)
 docker compose logs -f dashboard          # View logs
 ```
 
+### Terminal (Web-Based Claude Code Execution)
+The dashboard includes a web-based terminal for executing Claude Code commands remotely.
+
+**Access:**
+- Navigate to http://localhost:5000/terminal
+- Enter terminal password (default: "lavender")
+- Terminal provides restricted access to `claude` commands only
+
+**Security Features:**
+- Password authentication required
+- Only `claude` commands allowed (no arbitrary shell access)
+- Shell metacharacters blocked (;, &, |, $, etc.)
+- Command injection prevention
+- Real-time output streaming via WebSocket
+
+**Configuration:**
+```bash
+# Set custom password via environment variable
+export TERMINAL_PASSWORD="your-secure-password"
+
+# Or in .env file for Docker:
+echo "TERMINAL_PASSWORD=your-secure-password" > .env
+```
+
+**Docker Persistence:**
+Claude Code state persists between container restarts via volume mount:
+- Authentication credentials saved in `~/.claude`
+- Settings and preferences preserved
+- No need to re-authenticate after restart
+
+**Example Usage:**
+```bash
+# In the web terminal:
+claude --version                    # Check Claude Code version
+claude code --help                  # View Claude Code help
+claude code --skill ingestion       # Run ingestion skill remotely
+```
+
+**Important Notes:**
+- Terminal runs with container user permissions (non-root)
+- State directory (`~/.claude`) is mounted from host
+- Claude Code CLI is pre-installed in Docker container
+- Only use for administrative tasks and Claude Code skills
+
 ### Code Quality
 ```bash
 uv run black .                       # Format all Python code
@@ -127,9 +171,10 @@ That's it! No API keys, no configuration - just ask Claude Code to run ingestion
 - **Database:** SQLite 3
 - **PDF Processing:** Claude Code native PDF reading (perfect OCR, preserves tables)
 - **AI/Automation:** Claude Code with skills for parsing and categorization
-- **Web Framework:** Flask
-- **Frontend:** HTML/CSS/JavaScript with Chart.js/Plotly
-- **Container:** Docker & Docker Compose (dashboard only)
+- **Web Framework:** Flask with Flask-SocketIO for real-time communication
+- **Frontend:** HTML/CSS/JavaScript with Chart.js/Plotly and xterm.js for terminal
+- **Container:** Docker & Docker Compose (dashboard + terminal)
+- **Terminal:** WebSocket-based terminal emulator for Claude Code execution
 
 ### Repository Structure
 ```
@@ -146,9 +191,11 @@ lavender-ledger/                     # Git repository
 │   │   ├── categorizer.py
 │   │   └── importer.py
 │   ├── dashboard/
-│   │   ├── app.py                   # Flask application
+│   │   ├── app.py                   # Flask application with SocketIO
 │   │   ├── queries.py               # Read-only database queries
+│   │   ├── terminal.py              # WebSocket terminal for Claude Code execution
 │   │   └── templates/               # HTML templates with lilac theme
+│   │       ├── terminal.html        # Terminal UI with xterm.js
 │   ├── database/
 │   │   ├── schema.sql               # Database schema definition
 │   │   └── models.py                # Database access layer
