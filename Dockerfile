@@ -11,6 +11,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     && rm -rf /var/lib/apt/lists/*
 
+# Install Node.js (required for Claude Code CLI)
+RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+    && apt-get install -y nodejs \
+    && rm -rf /var/lib/apt/lists/*
+
 # Install uv
 RUN pip install --no-cache-dir uv
 
@@ -21,13 +26,11 @@ COPY src/ src/
 # Install dependencies
 RUN uv sync --frozen --no-dev
 
+# Install Claude Code CLI globally
+RUN npm install -g @anthropic-ai/claude-code
+
 # Create non-root user
 RUN useradd --create-home appuser
-
-# Install Claude Code CLI (if available)
-# Note: You may need to manually install Claude Code in the container
-# or mount the claude binary from the host system
-
 USER appuser
 
 # Expose port
