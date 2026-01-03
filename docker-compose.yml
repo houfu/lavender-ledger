@@ -9,6 +9,9 @@ services:
       # Mount cloud-synced data directory as read-only
       # Update this path to match your data directory
       - ~/Dropbox/PersonalFinance:/data:ro
+      # Mount Claude Code state directory for persistence across container restarts
+      # This preserves: authentication, settings, project history, and tasks
+      - ~/.claude:/home/appuser/.claude
     environment:
       - DATA_DIRECTORY=/data
       - DATABASE_PATH=/data/finance.db

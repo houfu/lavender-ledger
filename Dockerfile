@@ -31,6 +31,11 @@ RUN npm install -g @anthropic-ai/claude-code
 
 # Create non-root user
 RUN useradd --create-home appuser
+
+# Create Claude Code state directory with proper permissions
+RUN mkdir -p /home/appuser/.claude && \
+    chown -R appuser:appuser /home/appuser/.claude
+
 USER appuser
 
 # Expose port
