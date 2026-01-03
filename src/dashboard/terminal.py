@@ -40,6 +40,15 @@ class ClaudeTerminalSession:
             self._emit_output("\r\n❌ Empty command\r\n", is_error=True)
             return False
 
+        # Check for shell metacharacters that could enable command injection
+        dangerous_chars = [";", "&", "|", "$", "`", "(", ")", "{", "}", "<", ">"]
+        if any(char in command for char in dangerous_chars):
+            self._emit_output(
+                "\r\n❌ Command contains forbidden characters\r\n", is_error=True
+            )
+            self._emit_output("Shell operators (;, &, |, etc.) are not allowed\r\n")
+            return False
+
         # Parse command - must be 'claude' or start with 'claude '
         parts = command.split()
         if not parts or parts[0] != "claude":
