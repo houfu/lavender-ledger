@@ -20,7 +20,7 @@ RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
 RUN pip install --no-cache-dir uv
 
 # Copy project files
-COPY pyproject.toml .
+COPY pyproject.toml uv.lock README.md .
 COPY src/ src/
 
 # Install dependencies
@@ -34,7 +34,8 @@ RUN useradd --create-home appuser
 
 # Create Claude Code state directory with proper permissions
 RUN mkdir -p /home/appuser/.claude && \
-    chown -R appuser:appuser /home/appuser/.claude
+    chown -R appuser:appuser /home/appuser/.claude && \
+    chown -R appuser:appuser /app
 
 USER appuser
 
