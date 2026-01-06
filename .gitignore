@@ -1,5 +1,6 @@
 # Configuration (contains paths and potentially API keys)
 config.yaml
+docker-compose.yml
 
 # Database
 *.db
