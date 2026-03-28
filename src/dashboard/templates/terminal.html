@@ -404,15 +404,27 @@
 
     document.getElementById('clearButton').addEventListener('click', () => {
         term.clear();
+        term.writeln('🌸 Terminal cleared - ready for commands');
+        term.write('\r\n$ ');
     });
 
     document.getElementById('stopButton').addEventListener('click', () => {
         socket.emit('stop_command');
+        term.write('\r\n^C\r\n');
     });
 
     document.getElementById('reconnectButton').addEventListener('click', () => {
+        // Reset authentication state before reconnecting
+        isAuthenticated = false;
+        disableControls();
+        term.clear();
+        term.writeln('Reconnecting...');
+
+        // Disconnect and reconnect
         socket.disconnect();
-        socket.connect();
+        setTimeout(() => {
+            socket.connect();
+        }, 500); // Small delay to ensure clean disconnect
     });
 
     // Initialize on page load

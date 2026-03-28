@@ -232,5 +232,9 @@ def setup_terminal_handlers(socketio: SocketIO, terminal_password: str):
 
         session_id = request.sid
         if session_id in sessions:
-            sessions[session_id].stop()
-            emit("terminal_output", {"data": "\r\n⚠️  Command stopped\r\n$ "})
+            session = sessions[session_id]
+            if session.is_running and session.process and session.process.poll() is None:
+                session.stop()
+                emit("terminal_output", {"data": "\r\n⚠️  Command stopped\r\n$ "})
+            else:
+                emit("terminal_output", {"data": "\r\n⚠️  No command running\r\n$ "})
