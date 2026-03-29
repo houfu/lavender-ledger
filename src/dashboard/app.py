@@ -5,8 +5,10 @@ from datetime import date
 from pathlib import Path
 
 from flask import Flask, render_template, request, jsonify
+from flask_socketio import SocketIO
 
 from src.dashboard.queries import DashboardQueries
+from src.dashboard.terminal import setup_terminal_handlers
 
 
 def create_app(config: dict = None) -> Flask:
@@ -38,6 +40,15 @@ def create_app(config: dict = None) -> Flask:
 
     # Initialize queries
     queries = DashboardQueries(app.config["DATABASE_PATH"])
+
+    # Initialize SocketIO
+    socketio = SocketIO(app, cors_allowed_origins="*")
+
+    # Get terminal password from environment
+    terminal_password = os.environ.get("TERMINAL_PASSWORD", "lavender")
+
+    # Setup terminal WebSocket handlers
+    setup_terminal_handlers(socketio, terminal_password)
 
     @app.route("/")
     def index():
@@ -272,10 +283,18 @@ def create_app(config: dict = None) -> Flask:
         """Health check endpoint for Docker."""
         return jsonify({"status": "healthy"})
 
+    @app.route("/terminal")
+    def terminal():
+        """Terminal page for executing Claude Code commands."""
+        return render_template("terminal.html")
+
+    # Store socketio instance on app for access in __main__
+    app.socketio = socketio
+
     return app
 
 
 # For running directly
 if __name__ == "__main__":
     app = create_app()
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.socketio.run(app, host="0.0.0.0", port=5000, debug=True)
